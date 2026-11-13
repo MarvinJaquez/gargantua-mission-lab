@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GARGANTUA — Mission Lab</title>
+  <meta name="description" content="Plataforma para comparar regiones de Marte con terrenos terrestres y apoyar la selección de sitios de ensayo de rovers.">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="5" fill="#ee7a3c"/>
+        <ellipse cx="16" cy="16" rx="14" ry="5.5" fill="none" stroke="#52aee6" stroke-width="1.4" transform="rotate(-24 16 16)"/>
+        <circle cx="16" cy="16" r="14.5" fill="none" stroke="#43332a"/>
+      </svg>
+      <div><b>GARGANTUA</b><small>Mars–Earth Analog Terrain Lab</small></div>
+    </div>
+    <div class="top-actions">
+      <span class="chip" id="dataStatus">Cargando…</span>
+      <label class="btn" title="Cargar un archivo JSON con tus datos">
+        ⇪ Cargar JSON
+        <input type="file" id="jsonInput" accept=".json,application/json" hidden>
+      </label>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" id="rail" aria-label="Secciones">
+      <a href="#overview"><span>01</span>Resumen</a>
+      <a href="#explorer"><span>02</span>Regiones</a>
+      <a href="#compare"><span>03</span>Marte–Tierra</a>
+      <a href="#maps"><span>04</span>Mapas</a>
+      <a href="#stats"><span>05</span>Estadísticas</a>
+      <a href="#method"><span>06</span>Metodología</a>
+      <a href="#sources"><span>07</span>Fuentes</a>
+      <a href="#uncertainty"><span>08</span>Incertidumbres</a>
+      <a href="#results"><span>09</span>Resultados</a>
+    </nav>
+
+    <main>
+      <div class="banner" id="sampleBanner" hidden role="status">
+        <b>DATOS DE EJEMPLO</b>
+        <span id="sampleNote"></span>
+      </div>
+
+      <section class="sec" id="overview">
+        <div class="hero reveal">
+          <div class="kicker">Mission overview · NASA Space Apps Challenge</div>
+          <h1>Elegir dónde ensayar un rover de Marte, <em>sin salir de la Tierra.</em></h1>
+          <p>Compara la topografía de regiones marcianas con terrenos terrestres para identificar los mejores análogos de ensayo. Esta interfaz muestra únicamente los datos que tú cargas.</p>
+        </div>
+        <div class="tiles reveal" id="tiles"></div>
+        <div class="panel reveal">
+          <h3>Flujo de datos</h3>
+          <div class="pipeline">
+            <div>Datos externos<small>DEM, mapas, JSON</small></div>
+            <div>Validación<small>formato y rangos</small></div>
+            <div>Métricas<small>por región</small></div>
+            <div>Comparación<small>Marte ↔ Tierra</small></div>
+            <div>Resultados<small>clasificación</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec" id="explorer">
+        <div class="sec-head reveal"><span class="idx">02</span><h2>Explorador de regiones</h2>
+          <p class="lede">Selecciona una región para ver sus métricas, con incertidumbre cuando el archivo la incluye.</p></div>
+        <div class="toolbar" id="filters"></div>
+        <div class="split">
+          <div class="rgrid" id="regionGrid"></div>
+          <div class="panel detail" id="regionDetail"></div>
+        </div>
+      </section>
+
+      <section class="sec" id="compare">
+        <div class="sec-head reveal"><span class="idx">03</span><h2>Comparación Marte–Tierra</h2>
+          <p class="lede">Elige una región de cada cuerpo y compara sus métricas lado a lado.</p></div>
+        <div class="pickers">
+          <div><label class="lab m" for="selM">Marte</label><select id="selM"></select></div>
+          <div><label class="lab e" for="selE">Tierra</label><select id="selE"></select></div>
+        </div>
+        <div class="panel" id="compareOut"></div>
+      </section>
+
+      <section class="sec" id="maps">
+        <div class="sec-head reveal"><span class="idx">04</span><h2>Mapas topográficos</h2>
+          <p class="lede">Carga mapas procesados externamente. Esta interfaz no genera ni inventa terreno.</p></div>
+        <div class="toolbar" id="mapTabs"></div>
+        <div class="mapframe" id="mapFrame"></div>
+        <div class="mapcap"><span id="mapCapL"></span><span id="mapCapR"></span></div>
+        <div class="maptools">
+          <label class="btn">⇪ Cargar imagen de mapa
+            <input type="file" id="mapInput" accept="image/png,image/jpeg,image/webp" hidden></label>
+          <input type="text" id="mapSource" placeholder="Fuente y procesamiento del mapa (obligatorio indicarlo)" aria-label="Fuente del mapa">
+        </div>
+      </section>
+
+      <section class="sec" id="stats">
+        <div class="sec-head reveal"><span class="idx">05</span><h2>Estadísticas</h2>
+          <p class="lede">Distribución de cada métrica por región. Los resúmenes se calculan solo con los datos cargados.</p></div>
+        <div class="toolbar" id="metricTabs"></div>
+        <div class="split">
+          <div class="panel" id="statBars"></div>
+          <div class="tablewrap"><table id="statTable"></table></div>
+        </div>
+      </section>
+
+      <section class="sec" id="method">
+        <div class="sec-head reveal"><span class="idx">06</span><h2>Metodología científica</h2>
+          <p class="lede">Pasos del flujo de trabajo y la fórmula de similitud que usa esta interfaz.</p></div>
+        <ol class="steps" id="steps"></ol>
+        <div class="formula">similitud = 1 − media( |a − b| / (máx − mín) ) · solo métricas disponibles en ambas regiones</div>
+      </section>
+
+      <section class="sec" id="sources">
+        <div class="sec-head reveal"><span class="idx">07</span><h2>Fuentes de datos</h2>
+          <p class="lede">Origen de cada dato. «Candidata» significa que aún no se ha cargado nada de esa fuente.</p></div>
+        <div class="tablewrap"><table id="sourceTable"></table></div>
+      </section>
+
+      <section class="sec" id="uncertainty">
+        <div class="sec-head reveal"><span class="idx">08</span><h2>Incertidumbres y limitaciones</h2>
+          <p class="lede">Lo que estos resultados no pueden decir.</p></div>
+        <div class="cards" id="limits"></div>
+      </section>
+
+      <section class="sec" id="results">
+        <div class="sec-head reveal"><span class="idx">09</span><h2>Resultados</h2>
+          <p class="lede">Similitud topográfica entre cada región de Marte (filas) y cada terreno terrestre (columnas). Pulsa una celda para compararlos.</p></div>
+        <div class="banner" id="resultsWarn" hidden role="status"><b>EJEMPLO</b><span>Estos resultados se calculan con datos de ejemplo; no tienen validez científica.</span></div>
+        <div class="tablewrap"><table class="matrix" id="matrix"></table></div>
+        <div class="cards" id="best" style="margin-top:16px"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>GARGANTUA · prototipo para NASA Space Apps Challenge · no es un producto oficial de la NASA</footer>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="data/sample/dataset.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/analysis.js"></script>
+  <script src="js/data-loader.js"></script>
+  <script src="js/map-view.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
