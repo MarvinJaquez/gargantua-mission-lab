@@ -5,8 +5,256 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GARGANTUA — Mission Lab</title>
   <meta name="description" content="Plataforma para comparar regiones de Marte con terrenos terrestres y apoyar la selección de sitios de ensayo de rovers.">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/layout.css">
+  <style>
+/* GARGANTUA — tokens de diseño. Cambia colores y tipografía solo aquí. */
+:root {
+  --bg: #0a0807;
+  --bg2: #100c0a;
+  --panel: #15100d;
+  --panel2: #1c1511;
+  --line: #2e231d;
+  --line2: #43332a;
+  --text: #efe7e0;
+  --mute: #a09186;
+  --dim: #6f625a;
+
+  --orange: #ee7a3c;   /* Marte */
+  --orange2: #c4551f;
+  --blue: #52aee6;     /* Tierra */
+  --blue2: #2f7fb5;
+  --amber: #e9b64a;    /* aviso / datos de ejemplo */
+  --red: #e2584d;
+
+  --radius: 10px;
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+</style>
+  <style>
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body {
+  margin: 0; color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.55;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(238,122,60,.13), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(82,174,230,.07), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+body::before { /* retícula tipo carta de navegación */
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
+p { margin: 0; }
+a { color: var(--blue); }
+.mono { font-family: var(--mono); }
+
+/* ---------- barra superior ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20; height: 60px; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: rgba(10,8,7,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand svg { width: 30px; height: 30px; }
+.brand b { font-size: 16px; letter-spacing: .22em; }
+.brand small { display: block; color: var(--mute); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.top-actions { display: flex; align-items: center; gap: 12px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 99px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  border: 1px solid var(--line2); color: var(--mute); white-space: nowrap;
+}
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.sample { color: var(--amber); border-color: rgba(233,182,74,.4); background: rgba(233,182,74,.07); }
+.chip.live { color: var(--blue); border-color: rgba(82,174,230,.4); background: rgba(82,174,230,.07); }
+.chip.high { color: var(--red); border-color: rgba(226,88,77,.4); }
+.chip.mid { color: var(--amber); border-color: rgba(233,182,74,.4); }
+.chip.low { color: var(--blue); border-color: rgba(82,174,230,.4); }
+.badge {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; padding: 2px 7px; border-radius: 4px;
+  color: var(--amber); border: 1px solid rgba(233,182,74,.45); background: rgba(233,182,74,.08);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px; border-radius: 8px;
+  font: inherit; font-size: 13px; color: var(--text); background: var(--panel2); border: 1px solid var(--line2);
+  transition: border-color .2s var(--ease), background .2s var(--ease), transform .2s var(--ease);
+}
+.btn:hover { border-color: var(--orange); background: #241a14; }
+.btn:active { transform: translateY(1px); }
+.btn.on { border-color: var(--orange); background: rgba(238,122,60,.14); }
+.btn:focus-visible, select:focus-visible, a:focus-visible, .rcard:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* ---------- estructura ---------- */
+.shell { position: relative; z-index: 1; display: grid; grid-template-columns: 210px minmax(0, 1fr); max-width: 1380px; margin: 0 auto; }
+.rail { position: sticky; top: 60px; align-self: start; height: calc(100vh - 60px); padding: 28px 12px 28px 24px; }
+.rail a {
+  display: flex; gap: 10px; align-items: baseline; padding: 7px 10px; margin-bottom: 2px; border-radius: 7px;
+  color: var(--mute); text-decoration: none; font-size: 13px; border-left: 2px solid transparent;
+  transition: color .2s, background .2s, border-color .2s;
+}
+.rail a span { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.rail a:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.rail a.active { color: var(--text); border-left-color: var(--orange); background: rgba(238,122,60,.08); }
+main { padding: 28px 24px 60px; min-width: 0; }
+
+section.sec { padding: 40px 0 28px; border-top: 1px solid var(--line); }
+section.sec:first-child { border-top: 0; padding-top: 8px; }
+.sec-head { margin-bottom: 22px; max-width: 760px; }
+.sec-head .idx { font-family: var(--mono); font-size: 12px; color: var(--orange); letter-spacing: .14em; }
+.sec-head h2 { font-size: 26px; margin: 4px 0 6px; }
+.lede { color: var(--mute); }
+
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* ---------- paneles ---------- */
+.panel { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.panel h3 { font-size: 13px; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mute); margin-bottom: 12px; font-weight: 500; }
+.banner {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin-bottom: 20px; border-radius: var(--radius);
+  color: #f3dca3; background: rgba(233,182,74,.07); border: 1px solid rgba(233,182,74,.3); font-size: 13.5px;
+}
+.banner[hidden] { display: none; }
+.empty { color: var(--dim); font-family: var(--mono); font-size: 12px; padding: 14px 0; }
+
+/* ---------- overview ---------- */
+.hero { padding: 36px 0 28px; }
+.hero .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .2em; color: var(--orange); text-transform: uppercase; }
+.hero h1 { font-size: clamp(34px, 6vw, 62px); line-height: 1.04; margin: 10px 0 16px; max-width: 880px; }
+.hero h1 em { font-style: normal; background: linear-gradient(90deg, var(--orange), #f4a15f 45%, var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { max-width: 640px; color: var(--mute); font-size: 17px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 26px 0; }
+.tile { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.tile b { display: block; font-family: var(--mono); font-size: 30px; font-weight: 500; }
+.tile span { font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
+.tile.m b { color: var(--orange); } .tile.e b { color: var(--blue); }
+.pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; counter-reset: p; }
+.pipeline div { position: relative; padding: 12px 12px 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 13px; }
+.pipeline div::before { counter-increment: p; content: "0" counter(p); display: block; font-family: var(--mono); font-size: 10px; color: var(--orange); margin-bottom: 2px; }
+.pipeline small { display: block; color: var(--dim); font-size: 11.5px; }
+
+/* ---------- explorador ---------- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.rgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.rcard {
+  text-align: left; cursor: pointer; font: inherit; color: inherit; padding: 14px; border-radius: var(--radius);
+  background: var(--panel); border: 1px solid var(--line); transition: transform .25s var(--ease), border-color .25s, background .25s;
+}
+.rcard:hover { transform: translateY(-2px); border-color: var(--line2); }
+.rcard.sel { background: var(--panel2); }
+.rcard.mars.sel { border-color: var(--orange); box-shadow: 0 0 0 1px rgba(238,122,60,.3), 0 8px 28px -12px rgba(238,122,60,.35); }
+.rcard.earth.sel { border-color: var(--blue); box-shadow: 0 0 0 1px rgba(82,174,230,.3), 0 8px 28px -12px rgba(82,174,230,.35); }
+.rcard .tag { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+.rcard.mars .tag { color: var(--orange); } .rcard.earth .tag { color: var(--blue); }
+.rcard b { display: block; margin: 4px 0 8px; font-weight: 500; }
+.detail h2 { font-size: 20px; margin: 2px 0 4px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; margin: 12px 0; color: var(--mute); }
+.kv b { color: var(--text); font-weight: 500; font-family: var(--mono); font-size: 12.5px; }
+
+/* ---------- barras ---------- */
+.mrow { margin: 12px 0; }
+.mrow .top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.mrow .top span:first-child { color: var(--mute); }
+.mrow .val { font-family: var(--mono); }
+.track { position: relative; height: 8px; border-radius: 4px; background: #251c17; margin-top: 6px; overflow: visible; }
+.fill { height: 100%; width: 0; border-radius: 4px; transition: width .9s var(--ease); }
+.fill.mars { background: linear-gradient(90deg, var(--orange2), var(--orange)); }
+.fill.earth { background: linear-gradient(90deg, var(--blue2), var(--blue)); }
+.unc { position: absolute; top: -3px; height: 14px; border: 1px solid rgba(255,255,255,.55); border-top: 0; border-bottom: 0; background: rgba(255,255,255,.12); }
+.nodata { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+/* ---------- comparación ---------- */
+.pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+select {
+  width: 100%; padding: 9px 10px; border-radius: 8px; font: inherit; color: var(--text);
+  background: var(--panel2); border: 1px solid var(--line2);
+}
+label.lab { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; }
+.lab.m { color: var(--orange); } .lab.e { color: var(--blue); }
+.cmp-row { display: grid; grid-template-columns: 110px 1fr 110px; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.cmp-row:last-child { border-bottom: 0; }
+.cmp-row .name { grid-column: 1 / -1; font-size: 13px; color: var(--mute); }
+.cmp-row .v { font-family: var(--mono); font-size: 14px; }
+.cmp-row .v.m { color: var(--orange); text-align: right; } .cmp-row .v.e { color: var(--blue); }
+.dual .track + .track { margin-top: 4px; }
+.score { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.score b { font-family: var(--mono); font-size: 40px; font-weight: 500; }
+.score span { color: var(--mute); font-size: 13px; }
+
+/* ---------- mapas ---------- */
+.mapframe {
+  position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--line2); background: #0c0908;
+}
+.mapframe svg, .mapframe img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mapframe img { object-fit: contain; background: #000; }
+.mapcap { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--mute); margin-top: 8px; font-family: var(--mono); }
+.maptools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.maptools input[type=text] { flex: 1; min-width: 180px; padding: 8px 10px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line2); color: var(--text); font: inherit; }
+
+/* ---------- tablas ---------- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); font-weight: 500; background: var(--panel); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--mono); text-align: right; }
+.matrix td.cell { cursor: pointer; font-family: var(--mono); text-align: center; transition: outline-color .2s; outline: 1px solid transparent; outline-offset: -2px; }
+.matrix td.cell:hover { outline-color: var(--text); }
+.matrix td.best { font-weight: 700; box-shadow: inset 0 0 0 1px var(--blue); }
+
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; counter-reset: s; }
+.steps li { counter-increment: s; padding: 14px 16px 14px 54px; position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.steps li::before { content: counter(s, decimal-leading-zero); position: absolute; left: 16px; top: 14px; font-family: var(--mono); color: var(--orange); }
+.steps b { display: block; font-weight: 500; }
+.steps span { color: var(--mute); font-size: 14px; }
+.formula { margin-top: 14px; padding: 14px 16px; border-left: 2px solid var(--blue); background: rgba(82,174,230,.06); font-family: var(--mono); font-size: 13px; color: #cfe6f5; border-radius: 0 8px 8px 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.cards .panel b { display: block; font-weight: 500; margin: 8px 0 4px; }
+.cards .panel p { color: var(--mute); font-size: 14px; }
+
+footer { position: relative; z-index: 1; text-align: center; padding: 26px 16px 40px; color: var(--dim); font-size: 12px; font-family: var(--mono); border-top: 1px solid var(--line); }
+.toast {
+  position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; z-index: 50; max-width: min(560px, 92vw);
+  padding: 12px 18px; border-radius: 10px; background: #231a15; border: 1px solid var(--line2); font-size: 13.5px;
+  transition: opacity .3s, transform .3s var(--ease); pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { border-color: var(--red); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { position: sticky; top: 60px; z-index: 15; height: auto; display: flex; gap: 4px; overflow-x: auto; padding: 8px 16px; background: rgba(10,8,7,.9); border-bottom: 1px solid var(--line); }
+  .rail a { white-space: nowrap; margin: 0; border-left: 0; border-bottom: 2px solid transparent; }
+  .rail a.active { border-bottom-color: var(--orange); }
+  .split { grid-template-columns: 1fr; }
+  .pipeline { grid-template-columns: 1fr 1fr; }
+  main { padding: 20px 16px 50px; }
+}
+@media (max-width: 560px) {
+  .brand small { display: none; }
+  .pickers { grid-template-columns: 1fr; }
+  .cmp-row { grid-template-columns: 80px 1fr 80px; gap: 8px; }
+  .topbar { padding: 0 14px; }
+  #dataStatus { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+</style>
 </head>
 <body>
   <header class="topbar">
@@ -140,11 +388,539 @@
   <footer>GARGANTUA · prototipo para NASA Space Apps Challenge · no es un producto oficial de la NASA</footer>
   <div class="toast" id="toast" role="status"></div>
 
-  <script src="data/sample/dataset.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/analysis.js"></script>
-  <script src="js/data-loader.js"></script>
-  <script src="js/map-view.js"></script>
-  <script src="js/app.js"></script>
+  <script>
+/* ============================================================
+   DATOS DE EJEMPLO — NO SON MEDICIONES REALES.
+   Sirven solo para probar la interfaz. Los valores y nombres
+   de regiones están inventados a propósito (EJ-M1, EJ-T1...).
+   Tus datos reales van en data/real/dataset.json (mismo formato).
+   ============================================================ */
+window.GARGANTUA_SAMPLE = {
+  meta: {
+    title: "Conjunto de ejemplo",
+    version: "0.1",
+    is_sample: true,
+    note: "Valores ilustrativos inventados para probar la interfaz. No son mediciones.",
+    metrics: [
+      { key: "slope_mean_deg", label: "Pendiente media", unit: "°", min: 0, max: 30 },
+      { key: "roughness_idx", label: "Rugosidad (índice)", unit: "", min: 0, max: 1 },
+      { key: "relief_m", label: "Relieve local", unit: "m", min: 0, max: 500 },
+      { key: "rock_cover_pct", label: "Cobertura de rocas", unit: "%", min: 0, max: 40 }
+    ]
+  },
+
+  regions: [
+    { id: "EJ-M1", body: "mars", name: "Región ejemplo M-1", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 4.1, roughness_idx: 0.22, relief_m: 60, rock_cover_pct: 8 },
+      uncertainty: { slope_mean_deg: 0.6, roughness_idx: 0.05 } },
+    { id: "EJ-M2", body: "mars", name: "Región ejemplo M-2", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 11.5, roughness_idx: 0.48, relief_m: 210, rock_cover_pct: 18 },
+      uncertainty: { slope_mean_deg: 1.2 } },
+    { id: "EJ-M3", body: "mars", name: "Región ejemplo M-3", is_sample: true, coords: null,
+      notes: "Ficticia. Le falta la cobertura de rocas a propósito, para mostrar cómo se ve un dato ausente.",
+      metrics: { slope_mean_deg: 7.3, roughness_idx: 0.35, relief_m: 120, rock_cover_pct: null },
+      uncertainty: {} },
+    { id: "EJ-M4", body: "mars", name: "Región ejemplo M-4", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 2.2, roughness_idx: 0.12, relief_m: 25, rock_cover_pct: 5 },
+      uncertainty: { relief_m: 6 } },
+
+    { id: "EJ-T1", body: "earth", name: "Terreno ejemplo T-1", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 3.8, roughness_idx: 0.25, relief_m: 70, rock_cover_pct: 10 },
+      uncertainty: { slope_mean_deg: 0.4 } },
+    { id: "EJ-T2", body: "earth", name: "Terreno ejemplo T-2", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 14.0, roughness_idx: 0.55, relief_m: 260, rock_cover_pct: 22 },
+      uncertainty: {} },
+    { id: "EJ-T3", body: "earth", name: "Terreno ejemplo T-3", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 6.5, roughness_idx: 0.30, relief_m: 110, rock_cover_pct: 14 },
+      uncertainty: { roughness_idx: 0.04 } },
+    { id: "EJ-T4", body: "earth", name: "Terreno ejemplo T-4", is_sample: true, coords: null,
+      notes: "Entrada ficticia para probar la interfaz.",
+      metrics: { slope_mean_deg: 9.9, roughness_idx: 0.41, relief_m: 180, rock_cover_pct: 12 },
+      uncertainty: {} }
+  ],
+
+  maps: [],
+
+  sources: [
+    { name: "MOLA (Mars Global Surveyor)", type: "Altimetría láser, Marte", status: "candidata",
+      use: "Topografía global de Marte para pendiente y relieve a escala regional.", url: null },
+    { name: "Modelos de terreno HiRISE", type: "DTM de alta resolución, Marte", status: "candidata",
+      use: "Rugosidad y rocas en sitios concretos, donde existan modelos.", url: null },
+    { name: "Imágenes CTX", type: "Imágenes de contexto, Marte", status: "candidata",
+      use: "Contexto geomorfológico y revisión visual de las regiones.", url: null },
+    { name: "SRTM / Copernicus DEM", type: "Modelo de elevación, Tierra", status: "candidata",
+      use: "Topografía de los terrenos terrestres de comparación.", url: null }
+  ],
+
+  methodology: [
+    { title: "Definir regiones", text: "Cada región de Marte y cada terreno terrestre se delimita con coordenadas y fuente documentadas." },
+    { title: "Obtener modelos de elevación", text: "Se usan modelos digitales de terreno de fuentes públicas, indicando su resolución real." },
+    { title: "Calcular métricas", text: "Pendiente, rugosidad, relieve y cobertura de rocas se calculan fuera de esta interfaz y se cargan como JSON." },
+    { title: "Armonizar escalas", text: "Las métricas se comparan a una escala espacial común, declarada en el archivo de datos." },
+    { title: "Comparar y clasificar", text: "Se mide la similitud topográfica entre cada región de Marte y cada terreno terrestre." }
+  ],
+
+  limitations: [
+    { level: "alta", title: "Datos de ejemplo", text: "Mientras se muestre el aviso «Datos de ejemplo», ninguna cifra ni resultado es científico." },
+    { level: "alta", title: "Escalas distintas", text: "La resolución de los modelos de Marte y de la Tierra puede diferir; la rugosidad depende de la escala de muestreo." },
+    { level: "media", title: "Solo topografía", text: "La similitud no considera gravedad, atmósfera, composición del regolito ni clima, que también afectan a un rover." },
+    { level: "media", title: "Incertidumbre parcial", text: "Solo se muestra incertidumbre donde el archivo de datos la proporciona; no se estima aquí." },
+    { level: "baja", title: "Similitud ≠ idoneidad", text: "Una alta similitud topográfica no garantiza que un sitio sea adecuado para ensayar un rover concreto." }
+  ]
+};
+
+</script>
+  <script>
+/* Utilidades visuales: construcción segura de DOM y filas de barras. */
+(function (root) {
+  const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+
+  // h("div", {class:"x"}, hijos...) — usa textContent, nunca innerHTML (los JSON externos no son de confianza).
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => {
+      if (v == null || v === false) return;
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    });
+    kids.flat().forEach((c) => { if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c))); });
+    return el;
+  }
+
+  const fmt = (v, unit) => (isNum(v) ? v.toLocaleString("es", { maximumFractionDigits: 2 }) + (unit ? " " + unit : "") : "—");
+
+  // Una barra con valor, posición dentro del rango de la métrica y (si existe) incertidumbre ±.
+  function metricRow(metric, value, body, unc) {
+    const track = h("div", { class: "track" });
+    const fill = h("div", { class: "fill " + body });
+    track.append(fill);
+    let w = 0;
+    if (isNum(value)) {
+      w = Math.max(0, Math.min(100, ((value - metric.min) / (metric.max - metric.min)) * 100));
+      if (isNum(unc) && unc > 0) {
+        const span = (unc / (metric.max - metric.min)) * 100;
+        const left = Math.max(0, w - span), right = Math.min(100, w + span);
+        track.append(h("div", { class: "unc", style: "left:" + left + "%;width:" + (right - left) + "%", title: "± " + fmt(unc, metric.unit) }));
+      }
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = w + "%"; }));
+    return h("div", { class: "mrow" },
+      h("div", { class: "top" },
+        h("span", null, metric.label),
+        h("span", { class: "val" }, fmt(value, metric.unit), isNum(unc) && unc > 0 ? " ± " + fmt(unc, "") : "")),
+      isNum(value) ? track : h("div", { class: "nodata" }, "SIN DATO"));
+  }
+
+  root.UI = { h, fmt, metricRow, isNum };
+})(window);
+
+</script>
+  <script>
+/* Cálculos simples y transparentes. Solo operan con los datos cargados. */
+(function (root) {
+  const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+
+  // Similitud = 1 − media(|a−b| / (máx−mín)) sobre las métricas disponibles en ambas regiones.
+  function similarity(a, b, metrics) {
+    let sum = 0, n = 0;
+    metrics.forEach((m) => {
+      const va = a.metrics[m.key], vb = b.metrics[m.key];
+      if (isNum(va) && isNum(vb)) {
+        sum += Math.min(1, Math.abs(va - vb) / (m.max - m.min));
+        n++;
+      }
+    });
+    return n ? { score: 1 - sum / n, n } : null;
+  }
+
+  function summary(regions, key) {
+    const vals = regions.map((r) => r.metrics[key]).filter(isNum);
+    if (!vals.length) return null;
+    const sum = vals.reduce((s, v) => s + v, 0);
+    return { n: vals.length, min: Math.min(...vals), max: Math.max(...vals), mean: sum / vals.length };
+  }
+
+  const pct = (v, m) => Math.max(0, Math.min(100, ((v - m.min) / (m.max - m.min)) * 100));
+
+  root.Analysis = { similarity, summary, pct, isNum };
+})(window);
+
+</script>
+  <script>
+/* Valida y normaliza un conjunto de datos (JSON). No contiene datos científicos. */
+(function (root) {
+  const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+
+  function validate(raw) {
+    const errors = [];
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return { ok: false, errors: ["El archivo no es un objeto JSON válido."] };
+    }
+    const meta = raw.meta || {};
+    const metrics = meta.metrics;
+    if (!Array.isArray(metrics) || !metrics.length) {
+      errors.push("meta.metrics debe ser una lista con al menos una métrica.");
+    } else {
+      metrics.forEach((m, i) => {
+        if (!m || !m.key || !m.label) errors.push("meta.metrics[" + i + "] necesita key y label.");
+        else if (!isNum(m.min) || !isNum(m.max) || m.max <= m.min) errors.push("meta.metrics[" + i + "] necesita min y max numéricos (min < max).");
+      });
+    }
+    if (!Array.isArray(raw.regions) || !raw.regions.length) {
+      errors.push("regions debe ser una lista con al menos una región.");
+    } else {
+      const seen = new Set();
+      raw.regions.forEach((r, i) => {
+        if (!r || !r.id || !r.name) { errors.push("regions[" + i + "] necesita id y name."); return; }
+        if (seen.has(r.id)) errors.push("El id «" + r.id + "» está repetido.");
+        seen.add(r.id);
+        if (r.body !== "mars" && r.body !== "earth") errors.push("regions[" + i + "].body debe ser \"mars\" o \"earth\".");
+        Object.entries(r.metrics || {}).forEach(([k, v]) => {
+          if (v !== null && !isNum(v)) errors.push("La métrica «" + k + "» de «" + r.id + "» debe ser número o null.");
+        });
+      });
+    }
+    if (errors.length) return { ok: false, errors };
+
+    const arr = (v) => (Array.isArray(v) ? v : []);
+    return {
+      ok: true,
+      errors: [],
+      data: {
+        meta: {
+          title: meta.title || "Conjunto de datos sin título",
+          version: meta.version || "",
+          is_sample: meta.is_sample === true,
+          note: meta.note || "",
+          metrics: metrics
+        },
+        regions: raw.regions.map((r) => ({
+          id: String(r.id), body: r.body, name: String(r.name),
+          is_sample: typeof r.is_sample === "boolean" ? r.is_sample : meta.is_sample === true,
+          coords: r.coords || null, area_km2: isNum(r.area_km2) ? r.area_km2 : null,
+          notes: r.notes || "", metrics: r.metrics || {}, uncertainty: r.uncertainty || {}
+        })),
+        maps: arr(raw.maps),
+        sources: arr(raw.sources),
+        methodology: arr(raw.methodology),
+        limitations: arr(raw.limitations)
+      }
+    };
+  }
+
+  async function readFile(file) {
+    let raw;
+    try { raw = JSON.parse(await file.text()); }
+    catch (e) { return { ok: false, errors: ["No se pudo leer el JSON: " + e.message] }; }
+    return validate(raw);
+  }
+
+  // Solo funciona cuando la página se sirve por http(s); con doble clic (file://) se omite.
+  async function tryFetchReal() {
+    if (!/^https?:$/.test(location.protocol)) return null;
+    try {
+      const r = await fetch("data/real/dataset.json", { cache: "no-store" });
+      if (!r.ok) return null;
+      const res = validate(await r.json());
+      if (!res.ok) { console.warn("data/real/dataset.json inválido:", res.errors); return { ok: false, errors: res.errors }; }
+      return res;
+    } catch (e) { return null; }
+  }
+
+  root.Loader = { validate, readFile, tryFetchReal };
+})(window);
+
+</script>
+  <script>
+/* Visor de mapas: muestra una imagen cargada o un esquema vacío. No dibuja terreno inventado. */
+(function (root) {
+  const { h } = root.UI;
+  const NS = "http://www.w3.org/2000/svg";
+
+  function schematic() {
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 800 450");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Cuadrícula vacía: no hay mapa cargado");
+    let g = "";
+    for (let x = 0; x <= 800; x += 50) g += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="450" stroke="#2e231d" stroke-width="' + (x % 200 ? 1 : 1.6) + '"/>';
+    for (let y = 0; y <= 450; y += 50) g += '<line x1="0" y1="' + y + '" x2="800" y2="' + y + '" stroke="#2e231d" stroke-width="' + (y % 200 ? 1 : 1.6) + '"/>';
+    g += '<circle cx="400" cy="225" r="46" fill="none" stroke="#43332a" stroke-dasharray="4 6"/>';
+    g += '<text x="400" y="222" text-anchor="middle" fill="#a09186" font-family="ui-monospace,Menlo,monospace" font-size="15" letter-spacing="3">SIN MAPA CARGADO</text>';
+    g += '<text x="400" y="244" text-anchor="middle" fill="#6f625a" font-family="ui-monospace,Menlo,monospace" font-size="11">Cuadrícula de referencia — no representa ningún terreno</text>';
+    svg.innerHTML = g; // contenido estático propio, sin datos externos
+    return svg;
+  }
+
+  function create(frame, capLeft, capRight) {
+    let objectUrl = null;
+    function clear() { if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; } frame.replaceChildren(); }
+    function showEmpty() {
+      clear(); frame.append(schematic());
+      capLeft.textContent = "Sin mapa activo";
+      capRight.textContent = "";
+    }
+    function showImage(src, left, right, isLocal) {
+      clear();
+      if (isLocal) objectUrl = src;
+      const img = h("img", { alt: left || "Mapa cargado", src });
+      img.addEventListener("error", () => { showEmpty(); capLeft.textContent = "No se pudo cargar la imagen"; });
+      frame.append(img);
+      capLeft.textContent = left || "";
+      capRight.textContent = right || "";
+    }
+    return { showEmpty, showImage, setRight: (t) => { capRight.textContent = t; } };
+  }
+
+  root.MapView = { create };
+})(window);
+
+</script>
+  <script>
+/* Lógica de la interfaz. Lee datos; nunca los define. */
+(function () {
+  const { h, fmt, metricRow, isNum } = window.UI;
+  const { similarity, summary, pct } = window.Analysis;
+  const $ = (s) => document.querySelector(s);
+  const BODY = { mars: "Marte", earth: "Tierra" };
+  const state = { data: null, filter: "all", sel: null, cmpM: null, cmpE: null, metric: null, mapTab: -1, map: null };
+
+  function toast(msg, err) {
+    const t = $("#toast");
+    t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
+    clearTimeout(toast.t); toast.t = setTimeout(() => { t.className = "toast" + (err ? " err" : ""); }, err ? 7000 : 3200);
+  }
+  const byId = (id) => state.data.regions.find((r) => r.id === id);
+  const ofBody = (b) => state.data.regions.filter((r) => r.body === b);
+  const sampleBadge = (r) => (r.is_sample ? h("span", { class: "badge" }, "EJEMPLO") : null);
+  const safeUrl = (u) => (typeof u === "string" && /^https?:\/\//i.test(u) ? u : null);
+
+  /* ---------- carga ---------- */
+  function setData(d) {
+    state.data = d;
+    const m = ofBody("mars"), e = ofBody("earth");
+    state.sel = d.regions[0].id;
+    state.cmpM = m[0] ? m[0].id : null;
+    state.cmpE = e[0] ? e[0].id : null;
+    state.metric = d.meta.metrics[0].key;
+    state.mapTab = -1;
+    renderAll();
+  }
+
+  async function boot() {
+    const first = window.Loader.validate(window.GARGANTUA_SAMPLE);
+    setData(first.data);
+    const real = await window.Loader.tryFetchReal();
+    if (real && real.ok) setData(real.data);
+    else if (real && !real.ok) toast("data/real/dataset.json no es válido: " + real.errors[0], true);
+  }
+
+  $("#jsonInput").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    const res = await window.Loader.readFile(f);
+    if (!res.ok) { toast(res.errors.slice(0, 2).join(" · "), true); return; }
+    setData(res.data);
+    toast("Datos cargados: " + res.data.meta.title);
+  });
+
+  /* ---------- render ---------- */
+  function renderAll() {
+    renderStatus(); renderOverview(); renderExplorer(); renderCompare();
+    renderMaps(); renderStats(); renderMethod(); renderSources(); renderLimits(); renderResults();
+  }
+
+  function renderStatus() {
+    const { meta } = state.data;
+    const chip = $("#dataStatus");
+    chip.textContent = meta.is_sample ? "Datos de ejemplo" : meta.title;
+    chip.className = "chip " + (meta.is_sample ? "sample" : "live");
+    $("#sampleBanner").hidden = !meta.is_sample;
+    $("#sampleNote").textContent = meta.note || "Los valores mostrados no son mediciones reales.";
+    $("#resultsWarn").hidden = !meta.is_sample;
+  }
+
+  function renderOverview() {
+    const d = state.data;
+    const tile = (n, label, cls) => h("div", { class: "tile " + (cls || "") }, h("b", null, n), h("span", null, label));
+    $("#tiles").replaceChildren(
+      tile(ofBody("mars").length, "Regiones de Marte", "m"),
+      tile(ofBody("earth").length, "Terrenos terrestres", "e"),
+      tile(d.meta.metrics.length, "Métricas"),
+      tile(d.sources.length, "Fuentes"),
+      tile(d.maps.length, "Mapas cargados"));
+  }
+
+  function renderExplorer() {
+    const filters = $("#filters");
+    filters.replaceChildren(...[["all", "Todas"], ["mars", "Marte"], ["earth", "Tierra"]].map(([k, label]) =>
+      h("button", { class: "btn" + (state.filter === k ? " on" : ""), onclick: () => { state.filter = k; renderExplorer(); } }, label)));
+    const list = state.data.regions.filter((r) => state.filter === "all" || r.body === state.filter);
+    if (!list.some((r) => r.id === state.sel) && list.length) state.sel = list[0].id;
+    $("#regionGrid").replaceChildren(...list.map((r) =>
+      h("button", { class: "rcard " + r.body + (r.id === state.sel ? " sel" : ""), onclick: () => { state.sel = r.id; renderExplorer(); }, "aria-pressed": r.id === state.sel },
+        h("span", { class: "tag" }, BODY[r.body]), h("b", null, r.name), sampleBadge(r))));
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const r = byId(state.sel), box = $("#regionDetail");
+    if (!r) { box.replaceChildren(h("div", { class: "empty" }, "SIN REGIONES")); return; }
+    const c = r.coords;
+    const coords = c && isNum(c.lat) && isNum(c.lon) ? fmt(c.lat, "°") + ", " + fmt(c.lon, "°") : "sin coordenadas cargadas";
+    box.replaceChildren(
+      h("h3", null, BODY[r.body] + " · " + r.id),
+      h("h2", null, r.name, " ", sampleBadge(r)),
+      h("div", { class: "kv" },
+        h("span", null, "Coordenadas"), h("b", null, coords),
+        h("span", null, "Área"), h("b", null, r.area_km2 != null ? fmt(r.area_km2, "km²") : "sin dato")),
+      ...state.data.meta.metrics.map((m) => metricRow(m, r.metrics[m.key], r.body, r.uncertainty[m.key])),
+      r.notes ? h("p", { class: "lede", style: "margin-top:14px;font-size:13px" }, r.notes) : null);
+  }
+
+  function fillSelect(sel, list, cur) {
+    sel.replaceChildren(...list.map((r) => h("option", { value: r.id, selected: r.id === cur }, r.name + (r.is_sample ? " (EJEMPLO)" : ""))));
+    sel.disabled = !list.length;
+  }
+
+  function renderCompare() {
+    fillSelect($("#selM"), ofBody("mars"), state.cmpM);
+    fillSelect($("#selE"), ofBody("earth"), state.cmpE);
+    const out = $("#compareOut"), a = byId(state.cmpM), b = byId(state.cmpE);
+    if (!a || !b) { out.replaceChildren(h("div", { class: "empty" }, "SE NECESITA AL MENOS UNA REGIÓN DE CADA CUERPO")); return; }
+    const metrics = state.data.meta.metrics, sim = similarity(a, b, metrics);
+    const rows = metrics.map((m) => {
+      const va = a.metrics[m.key], vb = b.metrics[m.key];
+      const t = (v, body) => { const tr = h("div", { class: "track" }); const f = h("div", { class: "fill " + body }); tr.append(f); const w = isNum(v) ? pct(v, m) : 0; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.width = w + "%"; })); return tr; };
+      return h("div", { class: "cmp-row" },
+        h("div", { class: "name" }, m.label + (m.unit ? " (" + m.unit + ")" : "")),
+        h("div", { class: "v m" }, fmt(va)),
+        h("div", { class: "dual" }, t(va, "mars"), t(vb, "earth")),
+        h("div", { class: "v e" }, fmt(vb)));
+    });
+    out.replaceChildren(
+      h("h3", null, "Similitud topográfica"),
+      h("div", { class: "score" },
+        h("b", null, sim ? Math.round(sim.score * 100) + "%" : "—"),
+        h("span", null, sim ? "sobre " + sim.n + " de " + metrics.length + " métricas" : "sin métricas comunes"),
+        a.is_sample || b.is_sample ? h("span", { class: "badge" }, "EJEMPLO") : null),
+      ...rows);
+  }
+  $("#selM").addEventListener("change", (e) => { state.cmpM = e.target.value; renderCompare(); });
+  $("#selE").addEventListener("change", (e) => { state.cmpE = e.target.value; renderCompare(); });
+
+  /* ---------- mapas ---------- */
+  function renderMaps() {
+    if (!state.map) state.map = window.MapView.create($("#mapFrame"), $("#mapCapL"), $("#mapCapR"));
+    const maps = state.data.maps;
+    const tabs = maps.map((m, i) => h("button", { class: "btn" + (state.mapTab === i ? " on" : ""), onclick: () => { state.mapTab = i; renderMaps(); } }, m.title || "Mapa " + (i + 1)));
+    $("#mapTabs").replaceChildren(...(tabs.length ? tabs : [h("span", { class: "empty" }, "SIN MAPAS EN EL JSON — puedes cargar una imagen local abajo")]));
+    const m = maps[state.mapTab];
+    if (m && m.image) state.map.showImage(m.image, m.title, [m.source, m.projection].filter(Boolean).join(" · ") || "fuente no indicada", false);
+    else if (state.mapTab === -1) state.map.showEmpty();
+  }
+  $("#mapInput").addEventListener("change", (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    state.mapTab = -2;
+    state.map.showImage(URL.createObjectURL(f), f.name, $("#mapSource").value || "fuente no indicada", true);
+    $("#mapTabs").replaceChildren(h("span", { class: "empty" }, "IMAGEN LOCAL — solo visible en esta sesión"));
+    if (!$("#mapSource").value) toast("Indica la fuente y el procesamiento del mapa en el campo de texto.");
+  });
+  $("#mapSource").addEventListener("input", (e) => { if (state.mapTab === -2) state.map.setRight(e.target.value || "fuente no indicada"); });
+
+  /* ---------- estadísticas ---------- */
+  function renderStats() {
+    const metrics = state.data.meta.metrics;
+    $("#metricTabs").replaceChildren(...metrics.map((m) =>
+      h("button", { class: "btn" + (state.metric === m.key ? " on" : ""), onclick: () => { state.metric = m.key; renderStats(); } }, m.label)));
+    const m = metrics.find((x) => x.key === state.metric);
+    $("#statBars").replaceChildren(h("h3", null, m.label + (m.unit ? " (" + m.unit + ")" : "")),
+      ...state.data.regions.map((r) => { const row = metricRow({ ...m, label: r.name }, r.metrics[m.key], r.body, r.uncertainty[m.key]); return row; }));
+    const head = h("tr", null, ...["Cuerpo", "n", "Mín", "Máx", "Media"].map((t) => h("th", null, t)));
+    const rows = ["mars", "earth"].map((b) => {
+      const s = summary(ofBody(b), m.key);
+      return h("tr", null, h("td", null, BODY[b]), h("td", { class: "num" }, s ? s.n : "—"), h("td", { class: "num" }, s ? fmt(s.min) : "—"), h("td", { class: "num" }, s ? fmt(s.max) : "—"), h("td", { class: "num" }, s ? fmt(s.mean) : "—"));
+    });
+    $("#statTable").replaceChildren(h("thead", null, head), h("tbody", null, ...rows));
+  }
+
+  /* ---------- texto y tablas ---------- */
+  function renderMethod() {
+    const s = state.data.methodology;
+    $("#steps").replaceChildren(...(s.length ? s.map((x) => h("li", null, h("b", null, x.title), h("span", null, x.text))) : [h("li", null, h("span", null, "El archivo de datos no incluye metodología."))]));
+  }
+
+  function renderSources() {
+    const s = state.data.sources, t = $("#sourceTable");
+    if (!s.length) { t.replaceChildren(h("tbody", null, h("tr", null, h("td", { class: "empty" }, "SIN FUENTES EN EL JSON")))); return; }
+    t.replaceChildren(
+      h("thead", null, h("tr", null, ...["Fuente", "Tipo", "Estado", "Uso previsto"].map((x) => h("th", null, x)))),
+      h("tbody", null, ...s.map((x) => {
+        const u = safeUrl(x.url);
+        return h("tr", null,
+          h("td", null, u ? h("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, x.name) : x.name),
+          h("td", null, x.type || "—"),
+          h("td", null, h("span", { class: "chip " + (x.status === "cargada" ? "live" : "sample") }, x.status || "—")),
+          h("td", null, x.use || "—"));
+      })));
+  }
+
+  function renderLimits() {
+    const l = state.data.limitations;
+    const cls = { alta: "high", media: "mid", baja: "low" };
+    $("#limits").replaceChildren(...(l.length ? l.map((x) => h("div", { class: "panel" },
+      h("span", { class: "chip " + (cls[x.level] || "") }, x.level || "nota"), h("b", null, x.title), h("p", null, x.text)))
+      : [h("div", { class: "empty" }, "EL JSON NO INCLUYE LIMITACIONES")]));
+  }
+
+  /* ---------- resultados ---------- */
+  function renderResults() {
+    const mars = ofBody("mars"), earth = ofBody("earth"), metrics = state.data.meta.metrics;
+    const mx = $("#matrix"), best = $("#best");
+    if (!mars.length || !earth.length) { mx.replaceChildren(h("tbody", null, h("tr", null, h("td", { class: "empty" }, "SE NECESITAN REGIONES DE MARTE Y DE LA TIERRA")))); best.replaceChildren(); return; }
+    const grid = mars.map((a) => earth.map((b) => similarity(a, b, metrics)));
+    const rows = mars.map((a, i) => {
+      const top = grid[i].reduce((bi, s, j) => (s && (bi < 0 || s.score > grid[i][bi].score) ? j : bi), -1);
+      return h("tr", null, h("th", null, a.name),
+        ...earth.map((b, j) => {
+          const s = grid[i][j];
+          const style = s ? "background:rgba(82,174,230," + (0.06 + 0.5 * s.score).toFixed(2) + ")" : "";
+          return h("td", { class: "cell" + (j === top ? " best" : ""), style, title: s ? s.n + " métricas" : "sin métricas comunes",
+            onclick: () => { state.cmpM = a.id; state.cmpE = b.id; renderCompare(); $("#compare").scrollIntoView(); } },
+            s ? Math.round(s.score * 100) + "%" : "—");
+        }));
+    });
+    mx.replaceChildren(h("thead", null, h("tr", null, h("th", null, ""), ...earth.map((b) => h("th", null, b.name)))), h("tbody", null, ...rows));
+    best.replaceChildren(...mars.map((a, i) => {
+      const top = grid[i].reduce((bi, s, j) => (s && (bi < 0 || s.score > grid[i][bi].score) ? j : bi), -1);
+      return h("div", { class: "panel" },
+        h("span", { class: "chip" }, "Mejor análogo"), h("b", null, a.name),
+        h("p", null, top < 0 ? "Sin métricas comunes para comparar." : earth[top].name + " · " + Math.round(grid[i][top].score * 100) + "% (" + grid[i][top].n + " métricas)"));
+    }));
+  }
+
+  /* ---------- animación de entrada y menú ---------- */
+  const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 }) : null;
+  document.querySelectorAll(".reveal").forEach((el) => (io ? io.observe(el) : el.classList.add("in")));
+  if (io) {
+    const links = [...document.querySelectorAll("#rail a")];
+    const spy = new IntersectionObserver((es) => es.forEach((e) => {
+      if (e.isIntersecting) links.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id));
+    }), { rootMargin: "-35% 0px -60% 0px" });
+    document.querySelectorAll("section.sec").forEach((s) => spy.observe(s));
+  }
+
+  boot();
+})();
+
+</script>
 </body>
 </html>
